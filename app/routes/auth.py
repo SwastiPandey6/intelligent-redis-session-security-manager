@@ -1,36 +1,49 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
 from app.schemas.user_schema import UserSignup
+from app.database import get_db
+from app.models.user import User
 from app.utils.security import hash_password
 
 router = APIRouter()
-
-fake_users_db = []
-
 @router.post("/signup")
-def signup(user: UserSignup):
+def signup(
+    user: UserSignup,
+    db: Session = Depends(get_db)
+):
 
-    hashed_pw = hash_password(user.password)
+    existing_user = db.query(User).filter(
+        User.email == user.email
+    ).first()
 
-    fake_users_db.append({
-        "email": user.email,
-        "password": hashed_pw
-    })
+    if existing_user:
+        return {
+            "message": "Email already exists"
+        }
+
+    hashed_pw = hash_password(
+        user.password
+    )
+
+    new_user = User(
+        email=user.email,
+        password_hash=hashed_pw
+    )
+
+    db.add(new_user)
+
+    db.commit()
+
+    db.refresh(new_user)
 
     return {
         "message": "User registered successfully",
-        "user": user.email
+        "email": new_user.email
     }
-@router.post("/login")
-def login(user: UserSignup):
 
-    for db_user in fake_users_db:
-
-        if db_user["email"] == user.email:
-
-            return {
-                "message": "Login successful"
-            }
-
+@router.get("/test")
+def test():
     return {
-        "message": "Invalid credentials"
+        "message": "Auth routes working"
     }
