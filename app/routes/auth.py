@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.schemas.user_schema import UserSignup, UserLogin
 from app.utils.security import verify_password
+from fastapi import Header
+from app.utils.security import verify_token
 
 from app.schemas.user_schema import UserSignup
 from app.database import get_db
@@ -87,4 +89,19 @@ def login(
 def test():
     return {
         "message": "Auth routes working"
+    }
+
+@router.get("/profile")
+def profile(token: str):
+
+    email = verify_token(token)
+
+    if not email:
+        return {
+            "message": "Invalid token"
+        }
+
+    return {
+        "message": "Protected route accessed",
+        "email": email
     }
